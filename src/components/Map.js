@@ -16,7 +16,8 @@ import {
   defined,
   createWorldTerrainAsync,
   Math as CesiumMath,
-  buildModuleUrl
+  buildModuleUrl,
+  Rectangle
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
@@ -95,35 +96,145 @@ const Map = ({ layers, onFeatureSelect }) => {
   }, [onFeatureSelect, viewerRef.current]);
 
   // Process layers when they change
-  useEffect(() => {
-    // Clean up existing data sources
-    Object.values(dataSourceRefs.current).forEach(ds => {
-      if (ds && viewerRef.current && viewerRef.current.cesiumElement) {
-        viewerRef.current.cesiumElement.dataSources.remove(ds);
-      }
-    });
-    
-    dataSourceRefs.current = {};
-    
-    // If there are layers with bounds, set up fly to
-    const layerWithBounds = layers.find(layer => layer && layer.bounds);
-    if (layerWithBounds && layerWithBounds.bounds) {
-      // Calculate center of bounds
-      const [west, south, east, north] = layerWithBounds.bounds;
-      const centerLng = (west + east) / 2;
-      const centerLat = (south + north) / 2;
-      
-      // Set flyTo position
-      setFlyToPosition({
-        destination: Cartesian3.fromDegrees(centerLng, centerLat, 10000),
-        orientation: {
-          heading: CesiumMath.toRadians(0),
-          pitch: CesiumMath.toRadians(-45),
-          roll: 0.0
-        }
-      });
+useEffect(() => {
+  console.log("Layers updated:", layers);
+  
+  if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
+  
+  const viewer = viewerRef.current.cesiumElement;
+  
+  // Clean up existing data sources
+  Object.values(dataSourceRefs.current).forEach(ds => {
+    if (ds && viewer) {
+      viewer.dataSources.remove(ds);
     }
-  }, [layers]);
+  });
+  
+  dataSourceRefs.current = {};
+  
+  // Process zoom information
+  const processZoomInfo = () => {
+    // Look for layer with direct zoomTo property first (new format)
+    const layerWithDirectZoom = layers.find(layer => layer && layer.zoomTo);
+    
+    if (layerWithDirectZoom && layerWithDirectZoom.zoomTo) {
+      console.log("Found layer with direct zoomTo:", layerWithDirectZoom.zoomTo);
+      
+      // If it has center and zoom
+      if (layerWithDirectZoom.zoomTo.center && typeof layerWithDirectZoom.zoomTo.zoom === 'number') {
+        const height = 5000 / Math.pow(2, layerWithDirectZoom.zoomTo.zoom - 10);
+        setFlyToPosition({
+          destination: Cartesian3.fromDegrees(
+            layerWithDirectZoom.zoomTo.center[0], 
+            layerWithDirectZoom.zoomTo.center[1], 
+            height
+          ),
+          orientation: {
+            heading: CesiumMath.toRadians(0),
+            pitch: CesiumMath.toRadians(-45),
+            roll: 0.0
+          }
+        });
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  // If no direct zoom found, process geojson layers to find bounds
+  const zoomToGeojsonBounds = () => {
+    const geojsonLayers = layers.filter(layer => 
+      layer && 
+      layer.type === 'geojson' && 
+      layer.data && 
+      layer.data.features && 
+      layer.data.features.length
+    );
+    
+    if (geojsonLayers.length) {
+      for (const layer of geojsonLayers) {
+        let west = 180, south = 90, east = -180, north = -90;
+        let hasCoordinates = false;
+        
+        layer.data.features.forEach(feature => {
+          if (feature.geometry.type === 'Point') {
+            hasCoordinates = true;
+            const [lng, lat] = feature.geometry.coordinates;
+            west = Math.min(west, lng);
+            south = Math.min(south, lat);
+            east = Math.max(east, lng);
+            north = Math.max(north, lat);
+          } else if (feature.geometry.type === 'Polygon') {
+            hasCoordinates = true;
+            feature.geometry.coordinates[0].forEach(coord => {
+              const [lng, lat] = coord;
+              west = Math.min(west, lng);
+              south = Math.min(south, lat);
+              east = Math.max(east, lng);
+              north = Math.max(north, lat);
+            });
+          }
+        });
+        
+        if (hasCoordinates) {
+          console.log("Found bounds from GeoJSON:", west, south, east, north);
+          const centerLng = (west + east) / 2;
+          const centerLat = (south + north) / 2;
+          
+          // Add a little padding around the bounds
+          const padding = 0.02;  // about 2km
+          west -= padding;
+          east += padding;
+          south -= padding;
+          north += padding;
+          
+          setFlyToPosition({
+            destination: Cartesian3.fromDegrees(centerLng, centerLat, 10000),
+            orientation: {
+              heading: CesiumMath.toRadians(0),
+              pitch: CesiumMath.toRadians(-45),
+              roll: 0.0
+            }
+          });
+          
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+  
+  // Process in order: direct zoom, geojson bounds
+  const hasZoom = processZoomInfo() || zoomToGeojsonBounds();
+  console.log("Has zoom info:", hasZoom);
+  
+}, [layers]);
+
+// Modify the GeoJsonDataSource rendering:
+{/* Render GeoJSON/Polygon layers */}
+{layers.filter(layer => layer && (layer.type === 'geojson' || layer.type === 'polygon')).map((layer, index) => {
+  console.log("Rendering GeoJSON layer:", layer);
+  return (
+    <GeoJsonDataSource
+      key={`geojson-${index}-${Date.now()}`} // Force re-render
+      data={layer.data}
+      stroke={Color.fromCssColorString(layer.style?.color || '#3388ff')}
+      strokeWidth={layer.style?.weight || 2}
+      fill={Color.fromCssColorString(layer.style?.fillColor || '#3388ff').withAlpha(layer.style?.fillOpacity || 0.3)}
+      clampToGround={true}
+      name={layer.name || `Layer ${index + 1}`}
+      onLoad={dataSource => {
+        console.log("GeoJSON layer loaded:", dataSource);
+        dataSourceRefs.current[`layer-${index}`] = dataSource;
+        
+        // Add this to debug entities
+        if (dataSource.entities && dataSource.entities.values.length > 0) {
+          console.log("Entities in datasource:", dataSource.entities.values.length);
+        }
+      }}
+    />
+  );
+})}
 
   return (
     <div className="map-container">
@@ -156,6 +267,7 @@ const Map = ({ layers, onFeatureSelect }) => {
           {/* If we need to fly to a specific position */}
           {flyToPosition && (
             <CameraFlyTo 
+              key={`flyto-${JSON.stringify(flyToPosition)}`} // Force re-render when position changes
               destination={flyToPosition.destination}
               orientation={flyToPosition.orientation}
             />
@@ -164,7 +276,7 @@ const Map = ({ layers, onFeatureSelect }) => {
           {/* Render GeoJSON/Polygon layers */}
           {layers.filter(layer => layer && (layer.type === 'geojson' || layer.type === 'polygon')).map((layer, index) => (
             <GeoJsonDataSource
-              key={`geojson-${index}`}
+              key={`geojson-${index}-${Date.now()}`} // Force re-render
               data={layer.data}
               stroke={Color.fromCssColorString(layer.style?.color || '#3388ff')}
               strokeWidth={layer.style?.weight || 2}
@@ -173,6 +285,13 @@ const Map = ({ layers, onFeatureSelect }) => {
               name={layer.name || `Layer ${index + 1}`}
               onLoad={dataSource => {
                 dataSourceRefs.current[`layer-${index}`] = dataSource;
+                
+                // If this is a newly loaded data source and we don't have a flyToPosition yet,
+                // try to derive one from the data source's entities
+                if (!flyToPosition && dataSource && dataSource.entities && dataSource.entities.values.length > 0) {
+                  const viewer = viewerRef.current.cesiumElement;
+                  viewer.flyTo(dataSource);
+                }
               }}
             />
           ))}
