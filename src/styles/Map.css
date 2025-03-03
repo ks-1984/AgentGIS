@@ -1,14 +1,28 @@
 .map-container {
-    flex: 1;
-    height: 100%;
-    width: 100%;
-  }
-  
-  .leaflet-popup-content {
-    max-height: 300px;
-    overflow-y: auto;
-  }
-  
-  .leaflet-popup-content p {
-    margin: 5px 0;
-  }
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+/* Cesium specific styles */
+.cesium-viewer-bottom {
+  display: none;
+}
+
+.cesium-popup {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cesium-popup p {
+  margin: 5px 0;
+}
+
+.cesium-viewer .cesium-widget-credits {
+  display: none;
+}

@@ -1,137 +1,223 @@
 import React, { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { 
+  Viewer, 
+  Entity, 
+  GeoJsonDataSource, 
+  CameraFlyTo, 
+  PointGraphics, 
+  EntityDescription
+} from 'resium';
+import {
+  Cartesian3,
+  Color,
+  Ion,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
+  defined,
+  createWorldTerrainAsync,
+  Math as CesiumMath,
+  buildModuleUrl
+} from 'cesium';
+import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
 
-// Fix for Leaflet marker icons
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+// Set the base URL for Cesium's static assets
+buildModuleUrl.setBaseUrl('./cesium/');
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// Set your Cesium Ion access token here
+Ion.defaultAccessToken = process.env.REACT_APP_CESIUM_ION_TOKEN;
 
 const Map = ({ layers, onFeatureSelect }) => {
-  const mapRef = useRef(null);
-  const leafletMap = useRef(null);
-  const layerControls = useRef(null);
-  const layerRefs = useRef({});
+  const viewerRef = useRef(null);
+  const dataSourceRefs = useRef({});
+  const handlerRef = useRef(null);
   const [position, setPosition] = useState({ lat: 5.9804, lng: 116.0735 }); // Kota Kinabalu, Sabah
+  const [flyToPosition, setFlyToPosition] = useState(null);
+  const [terrainProvider, setTerrainProvider] = useState(null);
 
-  // Initialize map
+  // Load terrain provider on component mount
   useEffect(() => {
-    if (!leafletMap.current) {
-      leafletMap.current = L.map(mapRef.current).setView([position.lat, position.lng], 12);
-      
-      // Add base layers (Google-like maps)
-      const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      });
-      
-      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-      });
-      
-      const baseMaps = {
-        "Streets": streets,
-        "Satellite": satellite
-      };
-      
-      streets.addTo(leafletMap.current);
-      
-      // Add layer control
-      layerControls.current = L.control.layers(baseMaps, {}).addTo(leafletMap.current);
-      
-      // Add scale control
-      L.control.scale().addTo(leafletMap.current);
-    }
-    
-    return () => {
-      if (leafletMap.current) {
-        leafletMap.current.remove();
-        leafletMap.current = null;
+    const loadTerrain = async () => {
+      try {
+        const terrain = await createWorldTerrainAsync();
+        setTerrainProvider(terrain);
+      } catch (error) {
+        console.error("Failed to load terrain provider:", error);
       }
     };
+    
+    loadTerrain();
   }, []);
-  
-  // Handle new layers
+
+  // Set up click handler for feature selection
   useEffect(() => {
-    if (!leafletMap.current) return;
+    if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
+
+    const viewer = viewerRef.current.cesiumElement;
     
-    // Clean up old layers
-    Object.values(layerRefs.current).forEach(layer => {
-      leafletMap.current.removeLayer(layer);
-      if (layerControls.current) {
-        layerControls.current.removeLayer(layer);
-      }
-    });
-    
-    layerRefs.current = {};
-    
-    // Add new layers
-    layers.forEach((layerData, index) => {
-      if (!layerData) return;
-      
-      let layer;
-      const layerId = `layer-${index}`;
-      
-      if (layerData.type === 'polygon' || layerData.type === 'geojson') {
-        layer = L.geoJSON(layerData.data, {
-          style: layerData.style || {
-            color: '#3388ff',
-            weight: 2,
-            opacity: 0.8,
-            fillColor: '#3388ff',
-            fillOpacity: 0.3
-          },
-          onEachFeature: (feature, layer) => {
-            if (feature.properties) {
-              const popupContent = Object.entries(feature.properties)
-                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
-                .join('<br>');
-                
-              layer.bindPopup(popupContent);
-              
-              layer.on('click', () => {
-                if (onFeatureSelect) {
-                  onFeatureSelect(feature);
-                }
-              });
-            }
+    // Clean up previous handler if it exists
+    if (handlerRef.current) {
+      handlerRef.current.destroy();
+      handlerRef.current = null;
+    }
+
+    // Create new handler
+    handlerRef.current = new ScreenSpaceEventHandler(viewer.canvas);
+    handlerRef.current.setInputAction((click) => {
+      const pickedFeature = viewer.scene.pick(click.position);
+      if (defined(pickedFeature) && pickedFeature.id && pickedFeature.id.properties) {
+        const properties = {};
+        
+        // Extract properties from the Cesium entity
+        for (const key in pickedFeature.id.properties) {
+          if (pickedFeature.id.properties.hasOwnProperty(key) && 
+              pickedFeature.id.properties[key] && 
+              typeof pickedFeature.id.properties[key].getValue === 'function') {
+            properties[key] = pickedFeature.id.properties[key].getValue();
           }
-        });
-      } else if (layerData.type === 'marker') {
-        layer = L.marker([layerData.lat, layerData.lng]);
-        if (layerData.popup) {
-          layer.bindPopup(layerData.popup);
         }
-      } else if (layerData.type === 'heatmap' && window.L.heatLayer) {
-        layer = L.heatLayer(layerData.points, layerData.options);
+        
+        if (onFeatureSelect) {
+          onFeatureSelect({
+            properties,
+            id: pickedFeature.id.id
+          });
+        }
       }
-      
-      if (layer) {
-        layer.addTo(leafletMap.current);
-        layerRefs.current[layerId] = layer;
-        
-        if (layerControls.current) {
-          layerControls.current.addOverlay(layer, layerData.name || `Layer ${index + 1}`);
-        }
-        
-        // If the layer has bounds, fit the map to those bounds
-        if (layerData.bounds) {
-          leafletMap.current.fitBounds(layerData.bounds);
-        } else if (layer.getBounds && !layer.getBounds().isEmpty()) {
-          leafletMap.current.fitBounds(layer.getBounds());
-        }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+
+    return () => {
+      if (handlerRef.current) {
+        handlerRef.current.destroy();
+        handlerRef.current = null;
+      }
+    };
+  }, [onFeatureSelect, viewerRef.current]);
+
+  // Process layers when they change
+  useEffect(() => {
+    // Clean up existing data sources
+    Object.values(dataSourceRefs.current).forEach(ds => {
+      if (ds && viewerRef.current && viewerRef.current.cesiumElement) {
+        viewerRef.current.cesiumElement.dataSources.remove(ds);
       }
     });
-  }, [layers, onFeatureSelect]);
-  
-  return <div id="map" ref={mapRef} className="map-container"></div>;
+    
+    dataSourceRefs.current = {};
+    
+    // If there are layers with bounds, set up fly to
+    const layerWithBounds = layers.find(layer => layer && layer.bounds);
+    if (layerWithBounds && layerWithBounds.bounds) {
+      // Calculate center of bounds
+      const [west, south, east, north] = layerWithBounds.bounds;
+      const centerLng = (west + east) / 2;
+      const centerLat = (south + north) / 2;
+      
+      // Set flyTo position
+      setFlyToPosition({
+        destination: Cartesian3.fromDegrees(centerLng, centerLat, 10000),
+        orientation: {
+          heading: CesiumMath.toRadians(0),
+          pitch: CesiumMath.toRadians(-45),
+          roll: 0.0
+        }
+      });
+    }
+  }, [layers]);
+
+  return (
+    <div className="map-container">
+      {terrainProvider && (
+        <Viewer 
+          ref={viewerRef} 
+          full
+          terrainProvider={terrainProvider}
+          animation={false}
+          timeline={false}
+          baseLayerPicker={true}
+          navigationHelpButton={false}
+          homeButton={true}
+          geocoder={false}
+          sceneModePicker={true}
+          selectionIndicator={false}
+          infoBox={true}
+        >
+          {/* Initial camera position */}
+          <CameraFlyTo 
+            destination={Cartesian3.fromDegrees(position.lng, position.lat, 10000)}
+            orientation={{
+              heading: CesiumMath.toRadians(0),
+              pitch: CesiumMath.toRadians(-45),
+              roll: 0.0
+            }}
+            once={true}
+          />
+
+          {/* If we need to fly to a specific position */}
+          {flyToPosition && (
+            <CameraFlyTo 
+              destination={flyToPosition.destination}
+              orientation={flyToPosition.orientation}
+            />
+          )}
+
+          {/* Render GeoJSON/Polygon layers */}
+          {layers.filter(layer => layer && (layer.type === 'geojson' || layer.type === 'polygon')).map((layer, index) => (
+            <GeoJsonDataSource
+              key={`geojson-${index}`}
+              data={layer.data}
+              stroke={Color.fromCssColorString(layer.style?.color || '#3388ff')}
+              strokeWidth={layer.style?.weight || 2}
+              fill={Color.fromCssColorString(layer.style?.fillColor || '#3388ff').withAlpha(layer.style?.fillOpacity || 0.3)}
+              clampToGround={true}
+              name={layer.name || `Layer ${index + 1}`}
+              onLoad={dataSource => {
+                dataSourceRefs.current[`layer-${index}`] = dataSource;
+              }}
+            />
+          ))}
+
+          {/* Render Marker layers */}
+          {layers.filter(layer => layer && layer.type === 'marker').map((layer, index) => (
+            <Entity
+              key={`marker-${index}`}
+              position={Cartesian3.fromDegrees(layer.lng, layer.lat)}
+              name={layer.name || `Marker ${index + 1}`}
+            >
+              <PointGraphics
+                pixelSize={10}
+                color={Color.RED}
+                outlineColor={Color.WHITE}
+                outlineWidth={2}
+              />
+              {layer.popup && (
+                <EntityDescription>
+                  <div dangerouslySetInnerHTML={{ __html: layer.popup }} />
+                </EntityDescription>
+              )}
+            </Entity>
+          ))}
+
+          {/* Render Heatmap layers (approximation with points) */}
+          {layers.filter(layer => layer && layer.type === 'heatmap').map((layer, index) => 
+            layer.points.map((point, pointIndex) => (
+              <Entity
+                key={`heatmap-${index}-point-${pointIndex}`}
+                position={Cartesian3.fromDegrees(point[1], point[0])}
+              >
+                <PointGraphics
+                  pixelSize={point[2] ? Math.min(point[2] / 5, 20) : 10}
+                  color={Color.RED.withAlpha(0.7)}
+                  outlineColor={Color.WHITE}
+                  outlineWidth={1}
+                />
+              </Entity>
+            ))
+          )}
+        </Viewer>
+      )}
+    </div>
+  );
 };
 
 export default Map;
