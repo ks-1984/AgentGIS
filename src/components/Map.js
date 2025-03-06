@@ -17,7 +17,8 @@ import {
   createWorldTerrainAsync,
   Math as CesiumMath,
   buildModuleUrl,
-  Rectangle
+  Rectangle,
+  SceneMode
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
@@ -32,7 +33,7 @@ const Map = ({ layers, onFeatureSelect }) => {
   const viewerRef = useRef(null);
   const dataSourceRefs = useRef({});
   const handlerRef = useRef(null);
-  const [position, setPosition] = useState({ lat: 5.9804, lng: 116.0735 }); // Kota Kinabalu, Sabah
+  const [position, setPosition] = useState({ lat: 5.4204, lng: 116.7968 }); // Sabah
   const [flyToPosition, setFlyToPosition] = useState(null);
   const [terrainProvider, setTerrainProvider] = useState(null);
 
@@ -250,12 +251,13 @@ useEffect(() => {
           homeButton={true}
           geocoder={false}
           sceneModePicker={true}
+          sceneMode={SceneMode.SCENE2D}
           selectionIndicator={false}
           infoBox={true}
         >
           {/* Initial camera position */}
           <CameraFlyTo 
-            destination={Cartesian3.fromDegrees(position.lng, position.lat, 10000)}
+            destination={Cartesian3.fromDegrees(position.lng, position.lat, 1000000)}
             orientation={{
               heading: CesiumMath.toRadians(0),
               pitch: CesiumMath.toRadians(-45),
