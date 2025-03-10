@@ -5,7 +5,7 @@ import {
   GeoJsonDataSource, 
   CameraFlyTo, 
   PointGraphics, 
-  EntityDescription
+  EntityDescription,
 } from 'resium';
 import {
   Cartesian3,
@@ -18,7 +18,10 @@ import {
   Math as CesiumMath,
   buildModuleUrl,
   Rectangle,
-  SceneMode
+  SceneMode,
+  VerticalOrigin,
+  HeightReference,
+  Cartesian2,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
@@ -36,6 +39,7 @@ const Map = ({ layers, onFeatureSelect }) => {
   const [position, setPosition] = useState({ lat: 5.4204, lng: 116.7968 }); // Sabah
   const [flyToPosition, setFlyToPosition] = useState(null);
   const [terrainProvider, setTerrainProvider] = useState(null);
+  const [viewer, setViewer] = useState(null);
 
   // Load terrain provider on component mount
   useEffect(() => {
@@ -51,12 +55,29 @@ const Map = ({ layers, onFeatureSelect }) => {
     loadTerrain();
   }, []);
 
+  useEffect(() => {
+    if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
+
+    const viewer = viewerRef.current.cesiumElement;
+    viewer.entities.add({
+      position: Cartesian3.fromDegrees(116.7968, 5.4204),
+      billboard: {
+        image: './pin.png',
+        verticalOrigin: VerticalOrigin.BOTTOM,
+        pixelOffset: new Cartesian2(15, 0),
+        scale: 0.2,
+      },
+      name: 'Sabah',
+      show: true, 
+    });
+  });
+
   // Set up click handler for feature selection
   useEffect(() => {
     if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
 
     const viewer = viewerRef.current.cesiumElement;
-    
+
     // Clean up previous handler if it exists
     if (handlerRef.current) {
       handlerRef.current.destroy();
