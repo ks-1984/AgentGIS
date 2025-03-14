@@ -22,6 +22,8 @@ import {
   VerticalOrigin,
   HeightReference,
   Cartesian2,
+  ImageryLayer,
+  IonWorldImageryStyle,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
@@ -39,7 +41,7 @@ const Map = ({ layers, onFeatureSelect }) => {
   const [position, setPosition] = useState({ lat: 5.4204, lng: 116.7968 }); // Sabah
   const [flyToPosition, setFlyToPosition] = useState(null);
   const [terrainProvider, setTerrainProvider] = useState(null);
-  const [viewer, setViewer] = useState(null);
+  const [baseLayer, setBaseLayer] = useState(null);
 
   // Load terrain provider on component mount
   useEffect(() => {
@@ -51,7 +53,7 @@ const Map = ({ layers, onFeatureSelect }) => {
         console.error("Failed to load terrain provider:", error);
       }
     };
-    
+ 
     loadTerrain();
   }, []);
 
@@ -59,6 +61,12 @@ const Map = ({ layers, onFeatureSelect }) => {
     if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
 
     const viewer = viewerRef.current.cesiumElement;
+    viewer.imageryLayers.removeAll();
+    viewer.imageryLayers.add(new ImageryLayer.fromWorldImagery({
+      style: IonWorldImageryStyle.ROAD,
+    }));
+    viewer.baseLayerPicker.container.querySelector('.cesium-baseLayerPicker-selected').src = '/cesium/Widgets/Images/ImageryProviders/bingRoads.png';
+
     viewer.entities.add({
       position: Cartesian3.fromDegrees(116.7968, 5.4204),
       billboard: {
@@ -70,7 +78,7 @@ const Map = ({ layers, onFeatureSelect }) => {
       name: 'Sabah',
       show: true, 
     });
-  });
+  }, [terrainProvider]);
 
   // Set up click handler for feature selection
   useEffect(() => {
@@ -267,6 +275,7 @@ useEffect(() => {
           terrainProvider={terrainProvider}
           animation={false}
           timeline={false}
+          // baseLayer={baseLayer}
           baseLayerPicker={true}
           navigationHelpButton={false}
           homeButton={true}
