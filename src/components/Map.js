@@ -34,14 +34,14 @@ buildModuleUrl.setBaseUrl('./cesium/');
 // Set your Cesium Ion access token here
 Ion.defaultAccessToken = process.env.REACT_APP_CESIUM_ION_TOKEN;
 
-const Map = ({ layers, onFeatureSelect }) => {
+const Map = ({ layers: propLayers, onFeatureSelect }) => {
   const viewerRef = useRef(null);
   const dataSourceRefs = useRef({});
   const handlerRef = useRef(null);
+  const [layers, setLayers] = useState(propLayers || []);
   const [position, setPosition] = useState({ lat: 5.4204, lng: 116.7968 }); // Sabah
   const [flyToPosition, setFlyToPosition] = useState(null);
   const [terrainProvider, setTerrainProvider] = useState(null);
-  const [baseLayer, setBaseLayer] = useState(null);
 
   // Load terrain provider on component mount
   useEffect(() => {
@@ -77,6 +77,17 @@ const Map = ({ layers, onFeatureSelect }) => {
       },
       name: 'Sabah',
       show: true, 
+    });
+
+    fetch('15-Sabah-New-DM-4326.geojson')
+    .then(response => response.json())
+    .then(data => {
+      const newLayers = [{
+        type: 'geojson',
+        data: data,
+        name: 'Demo geojson'
+      }];
+      setLayers(newLayers);
     });
   }, [terrainProvider]);
 
@@ -275,7 +286,6 @@ useEffect(() => {
           terrainProvider={terrainProvider}
           animation={false}
           timeline={false}
-          // baseLayer={baseLayer}
           baseLayerPicker={true}
           navigationHelpButton={false}
           homeButton={true}
