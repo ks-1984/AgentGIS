@@ -6,6 +6,8 @@ import {
   CameraFlyTo, 
   PointGraphics, 
   EntityDescription,
+  Billboard,
+  BillboardGraphics,
 } from 'resium';
 import {
   Cartesian3,
@@ -19,11 +21,11 @@ import {
   buildModuleUrl,
   Rectangle,
   SceneMode,
-  VerticalOrigin,
   HeightReference,
-  Cartesian2,
   ImageryLayer,
   IonWorldImageryStyle,
+  VerticalOrigin,
+  Cartesian2,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import '../styles/Map.css';
@@ -34,11 +36,10 @@ buildModuleUrl.setBaseUrl('./cesium/');
 // Set your Cesium Ion access token here
 Ion.defaultAccessToken = process.env.REACT_APP_CESIUM_ION_TOKEN;
 
-const Map = ({ layers: propLayers, onFeatureSelect }) => {
+const Map = ({ layers, onFeatureSelect }) => {
   const viewerRef = useRef(null);
   const dataSourceRefs = useRef({});
   const handlerRef = useRef(null);
-  const [layers, setLayers] = useState(propLayers || []);
   const [position, setPosition] = useState({ lat: 5.4204, lng: 116.7968 }); // Sabah
   const [flyToPosition, setFlyToPosition] = useState(null);
   const [terrainProvider, setTerrainProvider] = useState(null);
@@ -66,29 +67,6 @@ const Map = ({ layers: propLayers, onFeatureSelect }) => {
       style: IonWorldImageryStyle.ROAD,
     }));
     viewer.baseLayerPicker.container.querySelector('.cesium-baseLayerPicker-selected').src = '/cesium/Widgets/Images/ImageryProviders/bingRoads.png';
-
-    viewer.entities.add({
-      position: Cartesian3.fromDegrees(116.7968, 5.4204),
-      billboard: {
-        image: './pin.png',
-        verticalOrigin: VerticalOrigin.BOTTOM,
-        pixelOffset: new Cartesian2(15, 0),
-        scale: 0.2,
-      },
-      name: 'Sabah',
-      show: true, 
-    });
-
-    fetch('15-Sabah-New-DM-4326.geojson')
-    .then(response => response.json())
-    .then(data => {
-      const newLayers = [{
-        type: 'geojson',
-        data: data,
-        name: 'Demo geojson'
-      }];
-      setLayers(newLayers);
-    });
   }, [terrainProvider]);
 
   // Set up click handler for feature selection
@@ -139,11 +117,11 @@ const Map = ({ layers: propLayers, onFeatureSelect }) => {
   // Process layers when they change
 useEffect(() => {
   console.log("Layers updated:", layers);
-  
+
   if (!viewerRef.current || !viewerRef.current.cesiumElement) return;
   
   const viewer = viewerRef.current.cesiumElement;
-  
+
   // Clean up existing data sources
   Object.values(dataSourceRefs.current).forEach(ds => {
     if (ds && viewer) {
@@ -323,7 +301,7 @@ useEffect(() => {
               stroke={Color.fromCssColorString(layer.style?.color || '#3388ff')}
               strokeWidth={layer.style?.weight || 2}
               fill={Color.fromCssColorString(layer.style?.fillColor || '#3388ff').withAlpha(layer.style?.fillOpacity || 0.3)}
-              clampToGround={true}
+              clampToGround={layer.style?.clampToGround}
               name={layer.name || `Layer ${index + 1}`}
               onLoad={dataSource => {
                 dataSourceRefs.current[`layer-${index}`] = dataSource;
@@ -345,12 +323,22 @@ useEffect(() => {
               position={Cartesian3.fromDegrees(layer.lng, layer.lat)}
               name={layer.name || `Marker ${index + 1}`}
             >
-              <PointGraphics
-                pixelSize={10}
-                color={Color.RED}
-                outlineColor={Color.WHITE}
-                outlineWidth={2}
-              />
+              {layer.billboard ? (
+                <BillboardGraphics 
+                  image={layer.billboard.image || './pin.png'} 
+                  verticalOrigin={layer.billboard.verticalOrigin || VerticalOrigin.BOTTOM}
+                  pixelOffset={layer.billboard.pixelOffset || new Cartesian2(15, 0)}
+                  scale={layer.billboard.scale || 0.2} 
+                />
+              ) : (
+                <PointGraphics
+                  image={'/pin.png'}
+                  pixelSize={10}
+                  color={Color.RED}
+                  outlineColor={Color.WHITE}
+                  outlineWidth={2}
+                />
+              )}
               {layer.popup && (
                 <EntityDescription>
                   <div dangerouslySetInnerHTML={{ __html: layer.popup }} />

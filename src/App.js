@@ -5,6 +5,10 @@ import ChatBox from './components/ChatBox';
 import InfoPanel from './components/InfoPanel';
 import SettingsModal from './components/SettingsModal';
 import './styles/App.css';
+import {
+  VerticalOrigin,
+  Cartesian2,
+} from 'cesium';
 
 function App() {
   const [mapLayers, setMapLayers] = useState([]);
@@ -17,10 +21,12 @@ function App() {
   });
   const [infoPanelData, setInfoPanelData] = useState(null);
   const [infoPanelVisible, setInfoPanelVisible] = useState(false);
+  const layers = [];
 
   const clearMapLayers = () => {
     console.log("Clearing all map layers");
-    setMapLayers([]);
+    layers = []
+    setMapLayers(layers);
   };
 
   const handleFeatureSelect = (feature) => {
@@ -102,6 +108,35 @@ function App() {
       setInfoPanelVisible(true);
     }
   };
+
+  useEffect(() => {
+    if (!layers.find(layer => layer.name === 'Sabah')) {
+      layers.push({
+        type: 'marker',
+        name: 'Sabah',
+        lng: 116.7968, 
+        lat: 5.4204,
+        billboard: {}
+      });
+      setMapLayers(layers);
+    }
+    
+    fetch('15-Sabah-New-DM-4326.geojson')
+    .then(response => response.json())
+    .then(data => {
+      if (!layers.find(layer => layer.name === 'Demo geojson')) {
+        layers.push({
+          type: 'geojson',
+          data: data,
+          style: {
+            color: '#FF0000'
+          },
+          name: 'Demo geojson'
+        });
+        setMapLayers(layers);
+      }
+    });
+  }, [])
 
   return (
     <div className="app">
