@@ -179,7 +179,7 @@ const handleDemoZoom = () => {
               layers: layers,
               zoomTo: {
                 center: [lng, lat],
-                zoom: 8
+                zoom: 6
               }
             }
           };
