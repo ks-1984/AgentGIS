@@ -21,11 +21,17 @@ function App() {
   });
   const [infoPanelData, setInfoPanelData] = useState(null);
   const [infoPanelVisible, setInfoPanelVisible] = useState(false);
-  const layers = [];
+  let layers = [];
 
   const clearMapLayers = () => {
     console.log("Clearing all map layers");
-    layers = []
+    layers = [{
+      type: 'zoom',
+      zoomTo: {
+        center: [116.7968, 5.4204],
+        zoom: 2.5
+      }
+    }];
     setMapLayers(layers);
   };
 
@@ -108,35 +114,6 @@ function App() {
       setInfoPanelVisible(true);
     }
   };
-
-  useEffect(() => {
-    if (!layers.find(layer => layer.name === 'Sabah')) {
-      layers.push({
-        type: 'marker',
-        name: 'Sabah',
-        lng: 116.7968, 
-        lat: 5.4204,
-        billboard: {}
-      });
-      setMapLayers(layers);
-    }
-    
-    fetch('15-Sabah-New-DM-4326.geojson')
-    .then(response => response.json())
-    .then(data => {
-      if (!layers.find(layer => layer.name === 'Demo geojson')) {
-        layers.push({
-          type: 'geojson',
-          data: data,
-          style: {
-            color: '#FF0000'
-          },
-          name: 'Demo geojson'
-        });
-        setMapLayers(layers);
-      }
-    });
-  }, [])
 
   return (
     <div className="app">

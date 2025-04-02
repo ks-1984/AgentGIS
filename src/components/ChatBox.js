@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendMessageToAI } from '../services/aiService';
 import '../styles/ChatBox.css';
+import polygon from './polygon.json';
 
 const ChatBox = ({ apiSettings, onResponse, onClearMap }) => {
   const [messages, setMessages] = useState([]);
@@ -59,8 +60,8 @@ const handleDemoZoom = () => {
         }
       ],
       zoomTo: {
-        center: [116.0782, 5.9650],
-        zoom: 12
+        center: [116.0782, 5.9750],
+        zoom: 11
       }
     }
   };
@@ -116,6 +117,88 @@ const handleDemoZoom = () => {
         setIsLoading(false);
         return;
       }
+
+      //demo for pin, zoom and polygon
+      const polygonProcess = {...polygon};
+      if (polygonProcess && polygonProcess.features) {
+        const feature = polygonProcess.features.find(f => lowerInput.includes(f.properties.NAMA_DM.toLocaleLowerCase()));
+        if (feature) {
+          const lngList = feature.geometry.coordinates.flatMap(c => c.flatMap(n => n[0]));
+          const latList = feature.geometry.coordinates.flatMap(c => c.flatMap(n => n[1]));
+          const lng = (Math.min(...lngList) + Math.max(...lngList)) / 2;
+          const lat = (Math.min(...latList) + Math.max(...latList)) / 2;
+          let layers = [];
+          if (lowerInput.includes('pin') || lowerInput.includes('polygon') || lowerInput.includes('draw')) {
+            if (lowerInput.includes('pin')) {
+              layers = [
+                {
+                  type: 'marker',
+                  name: feature.properties.NAMA_DM,
+                  lng: lng, 
+                  lat: lat,
+                  billboard: {}
+                }
+              ];
+            } else {
+              polygonProcess.features = [feature];
+              layers = [
+                {
+                  type: 'geojson',
+                  data: polygonProcess,
+                  style: {
+                    color: '#FF0000'
+                  },
+                  name: feature.properties.NAMA_DM
+                }
+              ];
+            }
+          } else {
+            polygonProcess.features = [feature];
+            layers = [
+              {
+                type: 'marker',
+                name: feature.properties.NAMA_DM,
+                lng: lng, 
+                lat: lat,
+                billboard: {}
+              },
+              {
+                type: 'geojson',
+                data: polygonProcess,
+                style: {
+                  color: '#FF0000'
+                },
+                name: feature.properties.NAMA_DM
+              }
+            ];
+          }
+
+          const demoResponse = {
+            text: 'This is a demonstration of zooming to a location with pin and polygon boundary. I\'ve highlighted the approximate area of ' + capitalizeFirstLetter(feature.properties.NAMA_DM) + ' center.',
+            mapData: {
+              layers: layers,
+              zoomTo: {
+                center: [lng, lat],
+                zoom: 8
+              }
+            }
+          };
+
+          setMessages(prevMessages => [
+            ...prevMessages,
+            { role: 'assistant', content: demoResponse.text }
+          ]);
+
+          if (onResponse && typeof onResponse === 'function') {
+            console.log("Calling onResponse with demo data:", demoResponse);
+            onResponse(demoResponse);
+          } else {
+            console.error("onResponse is not a valid function", onResponse);
+          }
+
+          return;
+        }
+      }
       
       // Regular AI message handling
       const response = await sendMessageToAI({
@@ -145,6 +228,11 @@ const handleDemoZoom = () => {
       setIsLoading(false);
     }
   };
+
+  const capitalizeFirstLetter = val => {
+    val = val.toLocaleLowerCase();
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+  }
 
   return (
     <div className="chat-box">
