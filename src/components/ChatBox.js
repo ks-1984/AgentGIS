@@ -127,6 +127,8 @@ const handleDemoZoom = () => {
           const latList = feature.geometry.coordinates.flatMap(c => c.flatMap(n => n[1]));
           const lng = (Math.min(...lngList) + Math.max(...lngList)) / 2;
           const lat = (Math.min(...latList) + Math.max(...latList)) / 2;
+          const lngDiff = Math.max(...lngList) - Math.min(...lngList);
+          const latDiff  = Math.max(...latList) - Math.min(...latList);
           let layers = [];
           if (lowerInput.includes('pin') || lowerInput.includes('polygon') || lowerInput.includes('draw')) {
             if (lowerInput.includes('pin')) {
@@ -173,13 +175,32 @@ const handleDemoZoom = () => {
             ];
           }
 
+          let zoom = 6;
+          if (lngDiff >= latDiff) {
+            if (lngDiff * 10 < 1) {
+              zoom++;
+            }
+
+            if (lngDiff * 100 < 1) {
+              zoom++;
+            }
+          } else {
+            if (latDiff * 10 < 1) {
+              zoom++;
+            }
+
+            if (latDiff * 100 < 1) {
+              zoom++;
+            }
+          }
+
           const demoResponse = {
             text: 'This is a demonstration of zooming to a location with pin and polygon boundary. I\'ve highlighted the approximate area of ' + capitalizeFirstLetter(feature.properties.NAMA_DM) + ' center.',
             mapData: {
               layers: layers,
               zoomTo: {
                 center: [lng, lat],
-                zoom: 6
+                zoom: zoom
               }
             }
           };
