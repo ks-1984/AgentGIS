@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendMessageToAI } from '../services/aiService';
+import { sendMessageToAI, sendMessageToFastApi } from '../services/aiService';
 import '../styles/ChatBox.css';
 import polygon from './polygon.json';
 
@@ -120,7 +120,7 @@ const handleDemoZoom = () => {
 
       //demo for pin, zoom and polygon
       const polygonProcess = {...polygon};
-      if (polygonProcess && polygonProcess.features) {
+      if (lowerInput.startsWith('#') && polygonProcess && polygonProcess.features) {
         const feature = polygonProcess.features.find(f => lowerInput.includes(f.properties.NAMA_DM.toLocaleLowerCase()));
         if (feature) {
           const lngList = feature.geometry.coordinates.flatMap(c => c.flatMap(n => n[0]));
@@ -222,9 +222,13 @@ const handleDemoZoom = () => {
       }
       
       // Regular AI message handling
-      const response = await sendMessageToAI({
-        messages: [...messages, userMessage],
-        apiSettings
+      // const response = await sendMessageToAI({
+      //   messages: [...messages, userMessage],
+      //   apiSettings
+      // });
+
+      const response = await sendMessageToFastApi({
+        messages: [userMessage]
       });
       
       setMessages(prevMessages => [

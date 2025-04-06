@@ -75,3 +75,65 @@ export const sendMessageToAI = async ({ messages, apiSettings }) => {
     throw new Error(error.response?.data?.error?.message || error.message || 'Failed to communicate with AI service');
   }
 };
+
+export const sendMessageToFastApi = async ({ messages }) => {
+  try {
+    const response = await axios.post(
+      `http://localhost:8000/ask`,
+      {
+        question: messages[messages.length - 1].content
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const aiMessage = response.data;
+    
+    // // Parse response for possible map data
+    // let mapData = null;
+    // let infoData = null;
+    
+    // // Try to extract JSON from the response for map rendering
+    // const jsonMatch = aiMessage.match(/```json\n([\s\S]*?)\n```/);
+    // if (jsonMatch && jsonMatch[1]) {
+    //   try {
+    //     const extractedData = JSON.parse(jsonMatch[1]);
+        
+    //     if (extractedData.type === 'geojson' || 
+    //         extractedData.type === 'polygon' || 
+    //         extractedData.type === 'marker' ||
+    //         extractedData.type === 'heatmap') {
+    //       mapData = extractedData;
+    //     }
+        
+    //     if (extractedData.infoPanel) {
+    //       infoData = extractedData.infoPanel;
+    //     }
+        
+    //     // Clean up the message by removing the JSON code block
+    //     const cleanedMessage = aiMessage.replace(/```json\n[\s\S]*?\n```/, '');
+        
+    //     return {
+    //       text: cleanedMessage.trim(),
+    //       mapData,
+    //       infoData
+    //     };
+    //   } catch (error) {
+    //     console.error('Failed to parse JSON in AI response:', error);
+    //   }
+    // }
+    
+    // If no JSON was successfully extracted, return the original message
+    return {
+      text: aiMessage,
+      // mapData,
+      // infoData
+    };
+  } catch (error) {
+    console.error('Error in AI service:', error);
+    throw new Error(error.response?.data?.error?.message || error.message || 'Failed to communicate with AI service');
+  }
+};
