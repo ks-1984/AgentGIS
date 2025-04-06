@@ -84,7 +84,13 @@ export const sendMessageToFastApi = async ({ messages }) => {
         question: messages[messages.length - 1].content
       },
       {
-        withCredentials: false
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json',
+        },
+        mode: 'no-cors',
+        withCredentials: false,
+        credentials: 'same-origin',
       }
     );
 
