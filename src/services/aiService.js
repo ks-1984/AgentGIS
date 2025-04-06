@@ -82,6 +82,9 @@ export const sendMessageToFastApi = async ({ messages }) => {
       `http://localhost:8000/ask`,
       {
         question: messages[messages.length - 1].content
+      },
+      {
+        withCredentials: false
       }
     );
 
