@@ -8,7 +8,7 @@ const PopUpTable = ({popUpTableData, onClose}) => {
 
     useEffect(() => {
         if (!popUpTableData || !popUpTableData.data || Object.keys(popUpTableData.data).length === 0) {
-            return null;
+            return;
         }
 
         const data = Array.isArray(popUpTableData.data) ? popUpTableData.data : [popUpTableData.data];
