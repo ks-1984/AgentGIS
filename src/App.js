@@ -168,7 +168,9 @@ function App() {
       )}
 
       {showPopup && (
-        <PopUpTable popUpTableData={popUpTableData} onClose={handleClosePopup} />
+        <PopUpTable 
+        popUpTableData={popUpTableData} 
+        onClose={handleClosePopup} />
       )}
     </div>
   );

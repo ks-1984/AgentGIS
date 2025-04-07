@@ -8,6 +8,7 @@ const PopUpTable = ({popUpTableData, onClose}) => {
 
     useEffect(() => {
         if (!popUpTableData || !popUpTableData.data || Object.keys(popUpTableData.data).length === 0) {
+            onClose();
             return;
         }
 
