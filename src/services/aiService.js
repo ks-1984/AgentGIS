@@ -132,9 +132,9 @@ export const sendMessageToFastApi = async ({ messages }) => {
     
     // If no JSON was successfully extracted, return the original message
     return {
-      text: aiMessage,
+      text: aiMessage['sql_query'],
       // mapData,
-      // infoData
+      infoData: aiMessage.data
     };
   } catch (error) {
     console.error('Error in AI service:', error);
