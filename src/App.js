@@ -4,6 +4,7 @@ import Map from './components/Map';
 import ChatBox from './components/ChatBox';
 import InfoPanel from './components/InfoPanel';
 import SettingsModal from './components/SettingsModal';
+import PopUpTable from './components/PopUpTable';
 import './styles/App.css';
 import {
   VerticalOrigin,
@@ -21,6 +22,8 @@ function App() {
   });
   const [infoPanelData, setInfoPanelData] = useState(null);
   const [infoPanelVisible, setInfoPanelVisible] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popUpTableData, setPopUpTableData] = useState([]);
   let layers = [];
 
   const clearMapLayers = () => {
@@ -115,6 +118,17 @@ function App() {
     }
   };
 
+  const handleTablePopUpResponse = (response) => {
+    if (response.tableData) {
+      setPopUpTableData(response.tableData);
+      setShowPopup(true);
+    }
+  }
+
+  const handleClosePopup = () => {
+    setShowPopup(false);
+  };
+
   return (
     <div className="app">
       <Header onSettingsClick={() => setShowSettings(true)} />
@@ -129,6 +143,7 @@ function App() {
           <ChatBox 
             apiSettings={apiSettings}
             onResponse={handleAIResponse}
+            onTableResponse={handleTablePopUpResponse}
             onClearMap={clearMapLayers}
           />
           
@@ -150,6 +165,10 @@ function App() {
           }}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {showPopup && (
+        <PopUpTable popUpTableData={popUpTableData} onClose={handleClosePopup} />
       )}
     </div>
   );

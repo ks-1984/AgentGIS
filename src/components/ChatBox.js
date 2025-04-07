@@ -3,7 +3,7 @@ import { sendMessageToAI, sendMessageToFastApi } from '../services/aiService';
 import '../styles/ChatBox.css';
 import polygon from './polygon.json';
 
-const ChatBox = ({ apiSettings, onResponse, onClearMap }) => {
+const ChatBox = ({ apiSettings, onResponse, onTableResponse, onClearMap }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -239,6 +239,11 @@ const handleDemoZoom = () => {
       // If the response contains map data, process it
       if (response.mapData) {
         onResponse(response);
+      }
+
+      if (response.tableData) {
+        console.log('tableData: ', response.tableData);
+        onTableResponse(response);
       }
     } catch (error) {
       console.error('Error sending message to AI:', error);

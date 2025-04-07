@@ -134,7 +134,7 @@ export const sendMessageToFastApi = async ({ messages }) => {
     return {
       text: aiMessage['sql_query'],
       // mapData,
-      infoData: aiMessage.data
+      tableData: aiMessage
     };
   } catch (error) {
     console.error('Error in AI service:', error);
