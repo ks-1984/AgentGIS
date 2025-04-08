@@ -1,56 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import '../styles/PopUpTable.css';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
 
-const PopUpTable = ({popUpTableData, onClose}) => {
-    const [headers, setHeaders] = useState({});
-    const [dataArray, setDataArray] = useState([]);
-    const [title, setTitle] = useState([]);
+const PopUpTable = ({popUpTableData}) => {
+    console.log("popUpTableData: ", popUpTableData);
+    if (!popUpTableData || !popUpTableData.data || Object.keys(popUpTableData.data).length === 0) {
+        console.log("return null");
+        return null;
+    }
 
-    useEffect(() => {
-        if (!popUpTableData || !popUpTableData.data || Object.keys(popUpTableData.data).length === 0) {
-            onClose();
-            return;
-        }
-
-        const data = Array.isArray(popUpTableData.data) ? popUpTableData.data : [popUpTableData.data];
-        setTitle(popUpTableData['sql_query'] && String(popUpTableData['sql_query']).includes('FROM landtitle') ? 'Land Title': '');
-        setDataArray(data);
-        setHeaders(Object.keys(data[0] || {}));
-    }, [popUpTableData]);
+    const dataArray = Array.isArray(popUpTableData.data) ? popUpTableData.data : [popUpTableData.data];
+    const headers = Object.keys(dataArray[0] || {});
 
     return (
-      <div className="popup-overlay">
-        <div className="popup-table-container">
-          <div className="popup-header">
-            <h2>{title}</h2>
-            <button className="close-button" onClick={onClose}>
-              &times;
-            </button>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                {headers && headers.length > 0 && headers.map((header) => (
-                  <th key={header}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataArray && dataArray.length > 0 && dataArray.map((row, index) => (
-                <tr key={index}>
-                  {headers.map((header) => (
-                    <td key={`${index}-${header}`}>
-                      {row[header] !== undefined && row[header] !== null
-                        ? row[header].toString()
-                        : ''}
-                    </td>
-                  ))}
-                </tr>
+      <TableContainer component={Paper}>
+      <Table sx={{ minWidth: 650 }} size="small" aria-label="simple table">
+        <TableHead style={{backgroundColor: 'lightgray'}}>
+          <TableRow>
+            {headers && headers.length > 0 && headers.map((header, index) => (
+              <TableCell align={index === 0 ? 'left' : 'right'} key={header}>{header}</TableCell>  
+            ))}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {dataArray && dataArray.length > 0 && dataArray.map((row, index) => (
+            <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+              {headers.map((header) => (
+                <TableCell key={`${index}-${header}`}>
+                  {row[header] !== undefined && row[header] !== null
+                    ? row[header].toString()
+                    : ''}
+                </TableCell>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>  
     );
 }
 

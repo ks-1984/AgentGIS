@@ -1,7 +1,7 @@
 .chat-box {
   display: flex;
   flex-direction: column;
-  height: 60%;
+  height: 95%;
   overflow: hidden;
   background-color: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -205,4 +205,37 @@
 .input-container button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.full-screen-button {
+  background-color: #1c9d3a; /* Red background for error */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px; /* Optional: Rounded corners */
+}
+
+.arrow {
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  padding: 3px;
+  margin-right: 5px;
+  transform: rotate(135deg);
+  -webkit-transform: rotate(135deg);
+}
+
+.arrow-right {
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  padding: 3px;
+  margin-right: 5px;
+  transform: rotate(315deg);
+  -webkit-transform: rotate(315deg);
 }

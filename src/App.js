@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Map from './components/Map';
 import ChatBox from './components/ChatBox';
 import InfoPanel from './components/InfoPanel';
 import SettingsModal from './components/SettingsModal';
-import PopUpTable from './components/PopUpTable';
 import './styles/App.css';
 import {
   VerticalOrigin,
@@ -12,6 +11,7 @@ import {
 } from 'cesium';
 
 function App() {
+  const sideBarRef = useRef(null);
   const [mapLayers, setMapLayers] = useState([]);
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -22,9 +22,16 @@ function App() {
   });
   const [infoPanelData, setInfoPanelData] = useState(null);
   const [infoPanelVisible, setInfoPanelVisible] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [popUpTableData, setPopUpTableData] = useState([]);
+  const [chatFullScreen, setChatFullScreen] = useState(false);
   let layers = [];
+
+  useEffect(() => {
+    if (chatFullScreen) {
+      sideBarRef.current.style.width = '95%';
+    } else {
+      sideBarRef.current.style.width = '350px';
+    }
+  }, [chatFullScreen]);
 
   const clearMapLayers = () => {
     console.log("Clearing all map layers");
@@ -118,16 +125,9 @@ function App() {
     }
   };
 
-  const handleTablePopUpResponse = (response) => {
-    if (response.tableData) {
-      setPopUpTableData(response.tableData);
-      setShowPopup(true);
-    }
+  const chatFullScreenHandler = () => {
+    setChatFullScreen(prev => !prev);
   }
-
-  const handleClosePopup = () => {
-    setShowPopup(false);
-  };
 
   return (
     <div className="app">
@@ -139,12 +139,13 @@ function App() {
           onFeatureSelect={handleFeatureSelect}
         />
         
-        <div className="sidebar">
+        <div className="sidebar" ref={sideBarRef}>
           <ChatBox 
             apiSettings={apiSettings}
             onResponse={handleAIResponse}
-            onTableResponse={handleTablePopUpResponse}
             onClearMap={clearMapLayers}
+            onFullScreenClick={chatFullScreenHandler}
+            fullscreen={chatFullScreen}
           />
           
           {infoPanelVisible && (
@@ -165,12 +166,6 @@ function App() {
           }}
           onClose={() => setShowSettings(false)}
         />
-      )}
-
-      {showPopup && (
-        <PopUpTable 
-        popUpTableData={popUpTableData} 
-        onClose={handleClosePopup} />
       )}
     </div>
   );

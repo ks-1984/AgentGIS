@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendMessageToAI, sendMessageToFastApi } from '../services/aiService';
+import PopUpTable from './PopUpTable';
 import '../styles/ChatBox.css';
 import polygon from './polygon.json';
 
-const ChatBox = ({ apiSettings, onResponse, onTableResponse, onClearMap }) => {
+const ChatBox = ({ apiSettings, onResponse, onClearMap, onFullScreenClick, fullscreen }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -230,20 +231,22 @@ const handleDemoZoom = () => {
       const response = await sendMessageToFastApi({
         messages: [userMessage]
       });
-      
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        { role: 'assistant', content: response.text }
-      ]);
-      
-      // If the response contains map data, process it
-      if (response.mapData) {
-        onResponse(response);
-      }
 
       if (response.tableData) {
-        console.log('tableData: ', response.tableData);
-        onTableResponse(response);
+        setMessages(prevMessages => [
+          ...prevMessages, 
+          { role: 'table', content: response }
+        ]);
+      } else {
+        setMessages(prevMessages => [
+          ...prevMessages, 
+          { role: 'assistant', content: response.text }
+        ]);
+        
+        // If the response contains map data, process it
+        if (response.mapData) {
+          onResponse(response);
+        }
       }
     } catch (error) {
       console.error('Error sending message to AI:', error);
@@ -302,15 +305,16 @@ const handleDemoZoom = () => {
             </div>
           </div>
         ) : (
-          messages.map((msg, index) => (
-            <div 
-              key={index} 
-              className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
-            >
-              <div className="message-content">
-                {msg.content}
-              </div>
-            </div>
+          messages.map((msg, index) => (msg.role === 'table' 
+            ? (<PopUpTable popUpTableData={msg.content.tableData} />) 
+            : (<div 
+                key={index} 
+                className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
+               >
+                <div className="message-content">
+                 {msg.content}
+                </div>
+              </div>)
           ))
         )}
         {isLoading && (
@@ -335,6 +339,10 @@ const handleDemoZoom = () => {
           {isLoading ? '...' : 'Send'}
         </button>
       </form>
+      
+      <button className="full-screen-button" onClick={onFullScreenClick}>
+        <i className={fullscreen ? "arrow-right" : "arrow"}></i> {fullscreen ? "Exit Full Screen" : "Full Screen"}
+      </button>
     </div>
   );
 };
