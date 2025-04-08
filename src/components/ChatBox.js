@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sendMessageToAI, sendMessageToFastApi } from '../services/aiService';
-import PopUpTable from './PopUpTable';
+import CustomTable from './Table';
 import '../styles/ChatBox.css';
 import polygon from './polygon.json';
 
@@ -306,7 +306,7 @@ const handleDemoZoom = () => {
           </div>
         ) : (
           messages.map((msg, index) => (msg.role === 'table' 
-            ? (<PopUpTable popUpTableData={msg.content.tableData} />) 
+            ? (<CustomTable tableData={msg.content.tableData} key={index} />) 
             : (<div 
                 key={index} 
                 className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
