@@ -341,7 +341,7 @@ const handleDemoZoom = () => {
       </form>
       
       <button className="full-screen-button" onClick={onFullScreenClick}>
-        <i className={fullscreen ? "arrow-right" : "arrow"}></i> {fullscreen ? "Exit Full Screen" : "Full Screen"}
+        <i className={fullscreen ? "arrow" : "arrow-right"}></i> {fullscreen ? "Exit Full Screen" : "Full Screen"}
       </button>
     </div>
   );

@@ -134,11 +134,6 @@ function App() {
       <Header onSettingsClick={() => setShowSettings(true)} />
       
       <div className="main-content">
-        <Map 
-          layers={mapLayers} 
-          onFeatureSelect={handleFeatureSelect}
-        />
-        
         <div className="sidebar" ref={sideBarRef}>
           <ChatBox 
             apiSettings={apiSettings}
@@ -155,6 +150,11 @@ function App() {
             />
           )}
         </div>
+
+        <Map 
+          layers={mapLayers} 
+          onFeatureSelect={handleFeatureSelect}
+        />
       </div>
       
       {showSettings && (
